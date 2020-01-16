@@ -1,4 +1,4 @@
-platfIMAGE := udamliyanage/mqtt-susbscriber
+IMAGE := udamliyanage/mqtt-susbscriber
 
 test:
 	true
