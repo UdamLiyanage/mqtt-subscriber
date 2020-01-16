@@ -1,4 +1,4 @@
-IMAGE := udamliyanage/mqtt-susbscriber
+IMAGE := udamliyanage/mqtt-subscriber
 
 test:
 	true
