@@ -8,24 +8,17 @@ import (
 	"syscall"
 )
 
-var knt int
+//var knt int
 var f MQTT.MessageHandler = func(client MQTT.Client, msg MQTT.Message) {
 	fmt.Printf("MSG: %s\n", msg.Payload())
-	text := fmt.Sprintf("this is result msg #%d!", knt)
-	knt++
-	token := client.Publish("nn/result", 0, false, text)
-	token.Wait()
 }
 
 func main() {
-	knt = 0
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
-	opts := MQTT.NewClientOptions().AddBroker("tcp://54.67.77.75:1883")
-	opts.SetClientID("win-go")
-	opts.SetDefaultPublishHandler(f)
-	topic := "nn/sensors"
+	opts := setClientOptions()
+	topic := "test/button"
 
 	opts.OnConnect = func(c MQTT.Client) {
 		if token := c.Subscribe(topic, 0, f); token.Wait() && token.Error() != nil {
@@ -36,7 +29,13 @@ func main() {
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
 		panic(token.Error())
 	} else {
-		fmt.Printf("Connected to server\n")
+		fmt.Printf("Connected to server:\n")
 	}
 	<-c
+}
+
+func setClientOptions() *MQTT.ClientOptions {
+	opts := MQTT.NewClientOptions().AddBroker("tcp://54.67.77.75:1883")
+	opts.SetDefaultPublishHandler(f)
+	return opts
 }
