@@ -8,9 +8,8 @@ import (
 	"syscall"
 )
 
-//var knt int
 var f MQTT.MessageHandler = func(client MQTT.Client, msg MQTT.Message) {
-	fmt.Printf("MSG: %s\n", msg.Payload())
+	writeData(msg.Payload())
 }
 
 func main() {
@@ -18,7 +17,7 @@ func main() {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
 	opts := setClientOptions()
-	topic := "test/button"
+	topic := "/sght1"
 
 	opts.OnConnect = func(c MQTT.Client) {
 		if token := c.Subscribe(topic, 0, f); token.Wait() && token.Error() != nil {
@@ -39,3 +38,9 @@ func setClientOptions() *MQTT.ClientOptions {
 	opts.SetDefaultPublishHandler(f)
 	return opts
 }
+
+/* Device Definition
+	ph, serial
+    temp, humidity, light, serial
+	CSV
+*/
