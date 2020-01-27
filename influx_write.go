@@ -34,7 +34,7 @@ func writeData(msg []byte) {
 func writeToInflux(rec []string) {
 	if len(rec) == 2 {
 		phDevice(rec)
-	} else {
+	} else if len(rec) == 4 {
 		conditionsDevice(rec)
 	}
 }
