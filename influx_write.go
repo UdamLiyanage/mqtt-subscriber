@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/url"
+	"os"
 	"strconv"
 	_ "time"
 
@@ -17,7 +18,7 @@ var influx *client.Client
 
 func writeData(msg []byte) {
 	println(string(msg))
-	connect()
+	//connect()
 	r := csv.NewReader(bytes.NewBuffer(msg))
 	for {
 		record, err := r.Read()
@@ -40,7 +41,7 @@ func writeToInflux(rec []string) {
 }
 
 func connect() {
-	u, err := url.Parse("http://54.67.77.75:8086")
+	u, err := url.Parse(os.Getenv("INFLUX_DB"))
 	if err != nil {
 		panic(err)
 	}
