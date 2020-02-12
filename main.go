@@ -4,17 +4,28 @@ import (
 	"fmt"
 	MQTT "github.com/eclipse/paho.mqtt.golang"
 	_ "github.com/joho/godotenv/autoload"
+	"github.com/robfig/cron/v3"
 	"os"
 	"os/signal"
 	"syscall"
 )
 
+var mqClient MQTT.Client
+
 func init() {
 	connect()
+	c := cron.New()
+	_, err := c.AddFunc(os.Getenv("CRON_TIME"), publishMean)
+	if err != nil {
+		panic(err)
+	}
+	c.Start()
 }
 
 var f MQTT.MessageHandler = func(client MQTT.Client, msg MQTT.Message) {
-	writeData(msg.Payload())
+	if msg.Topic() != os.Getenv("MQTT_PUBLISH_TOPIC") {
+		writeData(msg.Payload())
+	}
 }
 
 func main() {
@@ -29,8 +40,8 @@ func main() {
 			panic(token.Error())
 		}
 	}
-	client := MQTT.NewClient(opts)
-	if token := client.Connect(); token.Wait() && token.Error() != nil {
+	mqClient = MQTT.NewClient(opts)
+	if token := mqClient.Connect(); token.Wait() && token.Error() != nil {
 		panic(token.Error())
 	} else {
 		fmt.Printf("Connected to server:\n")
@@ -42,6 +53,10 @@ func setClientOptions() *MQTT.ClientOptions {
 	opts := MQTT.NewClientOptions().AddBroker(os.Getenv("MQTT_BROKER"))
 	opts.SetDefaultPublishHandler(f)
 	return opts
+}
+
+func publishMean() {
+	mqClient.Publish(os.Getenv("MQTT_PUBLISH_TOPIC"), 0, false, getMean())
 }
 
 /* Device Definition

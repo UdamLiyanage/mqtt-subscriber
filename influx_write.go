@@ -3,22 +3,20 @@ package main
 import (
 	"bytes"
 	"encoding/csv"
+	"encoding/json"
+	"fmt"
+	_ "github.com/influxdata/influxdb1-client"
+	client "github.com/influxdata/influxdb1-client/v2"
 	"io"
 	"log"
-	"net/url"
 	"os"
 	"strconv"
-	_ "time"
-
-	_ "github.com/influxdata/influxdb1-client"
-	client "github.com/influxdata/influxdb1-client"
 )
 
-var influx *client.Client
+var influx client.Client
 
 func writeData(msg []byte) {
 	println(string(msg))
-	//connect()
 	r := csv.NewReader(bytes.NewBuffer(msg))
 	for {
 		record, err := r.Read()
@@ -40,12 +38,25 @@ func writeToInflux(rec []string) {
 	}
 }
 
-func connect() {
-	u, err := url.Parse(os.Getenv("INFLUX_DB"))
+func getMean() string {
+	q := fmt.Sprintf("SELECT MEAN(%s) FROM %s WHERE time > now() - 5m LIMIT 12", "temp", "conditions")
+	query := client.Query{
+		Command:  q,
+		Database: os.Getenv("INFLUX_DB_DATABASE"),
+	}
+	resp, err := influx.Query(query)
 	if err != nil {
 		panic(err)
 	}
-	influx, err = client.NewClient(client.Config{URL: *u})
+	res := resp.Results[0].Series[0].Values[0][1].(json.Number).String()
+	return res
+}
+
+func connect() {
+	var err error
+	influx, err = client.NewHTTPClient(client.HTTPConfig{
+		Addr: os.Getenv("INFLUX_DB"),
+	})
 	if err != nil {
 		panic(err)
 	}
@@ -60,46 +71,53 @@ func ParseFloat(s string, bitSize int) float64 {
 }
 
 func phDevice(rec []string) {
-	var pts = make([]client.Point, 2)
-	pts[0] = client.Point{
-		Measurement: "ph",
-		Tags: map[string]string{
+	point, err := client.NewPoint(
+		"ph",
+		map[string]string{
 			"serial_number": rec[1],
 		},
-		Fields: map[string]interface{}{
+		map[string]interface{}{
 			"ph": ParseFloat(rec[0], 32),
-		},
-	}
-	bps := client.BatchPoints{
-		Points:   pts,
-		Database: "button_test",
+		})
+	bps, err := client.NewBatchPoints(client.BatchPointsConfig{
+		Database: os.Getenv("INFLUX_DB_DATABASE"),
+	})
+	if err != nil {
+		panic(err)
 	}
 
-	_, err := influx.Write(bps)
+	bps.AddPoint(point)
+
+	err = influx.Write(bps)
 	if err != nil {
 		panic(err)
 	}
 }
 
 func conditionsDevice(rec []string) {
-	var pts = make([]client.Point, 2)
-	pts[0] = client.Point{
-		Measurement: "conditions",
-		Tags: map[string]string{
+	point, err := client.NewPoint(
+		"conditions",
+		map[string]string{
 			"serial_number": rec[3],
 		},
-		Fields: map[string]interface{}{
+		map[string]interface{}{
 			"temp":     ParseFloat(rec[0], 32),
 			"humidity": ParseFloat(rec[1], 32),
 			"light":    ParseFloat(rec[2], 32),
-		},
+		})
+	if err != nil {
+		panic(err)
 	}
-	bps := client.BatchPoints{
-		Points:   pts,
-		Database: "button_test",
+	bps, err := client.NewBatchPoints(client.BatchPointsConfig{
+		Database: os.Getenv("INFLUX_DB_DATABASE"),
+	})
+	if err != nil {
+		panic(err)
 	}
 
-	_, err := influx.Write(bps)
+	bps.AddPoint(point)
+
+	err = influx.Write(bps)
 	if err != nil {
 		panic(err)
 	}
