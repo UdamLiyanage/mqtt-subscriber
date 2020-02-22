@@ -24,7 +24,7 @@ func writeData(msg []byte) {
 			break
 		}
 		if err != nil {
-			log.Fatal(err)
+			log.Print("Error: ", err)
 		}
 		writeToInflux(record)
 	}
@@ -35,6 +35,8 @@ func writeToInflux(rec []string) {
 		phDevice(rec)
 	} else if len(rec) == 4 {
 		conditionsDevice(rec)
+	} else {
+		log.Println("Wrong Format")
 	}
 }
 
@@ -46,7 +48,7 @@ func getMean() string {
 	}
 	resp, err := influx.Query(query)
 	if err != nil {
-		panic(err)
+		log.Println("Error: ", err)
 	}
 	res := resp.Results[0].Series[0].Values[0][1].(json.Number).String()
 	return res
@@ -58,14 +60,14 @@ func connect() {
 		Addr: os.Getenv("INFLUX_DB"),
 	})
 	if err != nil {
-		panic(err)
+		log.Println("Error: ", err)
 	}
 }
 
 func ParseFloat(s string, bitSize int) float64 {
 	res, err := strconv.ParseFloat(s, bitSize)
 	if err != nil {
-		panic(err)
+		log.Println("Error: ", err)
 	}
 	return res
 }
@@ -83,14 +85,14 @@ func phDevice(rec []string) {
 		Database: os.Getenv("INFLUX_DB_DATABASE"),
 	})
 	if err != nil {
-		panic(err)
+		log.Println("Error: ", err)
 	}
 
 	bps.AddPoint(point)
 
 	err = influx.Write(bps)
 	if err != nil {
-		panic(err)
+		log.Println("Error: ", err)
 	}
 }
 
@@ -106,19 +108,19 @@ func conditionsDevice(rec []string) {
 			"light":    ParseFloat(rec[2], 32),
 		})
 	if err != nil {
-		panic(err)
+		log.Println("Error: ", err)
 	}
 	bps, err := client.NewBatchPoints(client.BatchPointsConfig{
 		Database: os.Getenv("INFLUX_DB_DATABASE"),
 	})
 	if err != nil {
-		panic(err)
+		log.Println("Error: ", err)
 	}
 
 	bps.AddPoint(point)
 
 	err = influx.Write(bps)
 	if err != nil {
-		panic(err)
+		log.Println("Error: ", err)
 	}
 }
